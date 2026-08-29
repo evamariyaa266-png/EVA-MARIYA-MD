@@ -2,7 +2,6 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Render Port Server
 app.get('/', (req, res) => res.send('EVA-MARIYA Bot is Active!'));
 app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
 
@@ -19,7 +18,6 @@ const config = require('./config');
 
 global.commands = new Map();
 
-// Load Plugins
 const pluginsDir = path.join(__dirname, 'plugins');
 if (fs.existsSync(pluginsDir)) {
     const pluginFiles = fs.readdirSync(pluginsDir).filter(file => file.endsWith('.js'));
@@ -35,6 +33,12 @@ if (fs.existsSync(pluginsDir)) {
 }
 
 async function startBot() {
+    // Clear old corrupted session to get fresh pairing code
+    const sessionPath = path.join(__dirname, 'session');
+    if (!fs.existsSync(sessionPath)) {
+        fs.mkdirSync(sessionPath);
+    }
+
     const { state, saveCreds } = await useMultiFileAuthState('./session');
     const { version } = await fetchLatestBaileysVersion();
 
@@ -51,9 +55,9 @@ async function startBot() {
             let phoneNumber = config.OWNER_NUMBER.replace(/[^0-9]/g, '');
             let code = await sock.requestPairingCode(phoneNumber);
             console.log(`\n========================================\n`);
-            console.log(`🔑 YOUR PAIRING CODE: ${code}`);
+            console.log(`🔑 YOUR BRAND NEW PAIRING CODE: ${code}`);
             console.log(`\n========================================\n`);
-        }, 3000);
+        }, 4000);
     }
 
     sock.ev.on('creds.update', saveCreds);
@@ -74,9 +78,7 @@ async function startBot() {
             const msg = chatUpdate.messages[0];
             if (!msg.message) return;
 
-            const jid = msg.key.remoteJid;
             const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-
             if (!text.startsWith(config.PREFIX)) return;
 
             const args = text.slice(config.PREFIX.length).trim().split(/ +/);
