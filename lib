@@ -1,6 +1,31 @@
 const fs = require('fs');
 const path = require('path');
 
+// Basic command handler function for the bot
+const cmd = (info, func) => {
+    return { info, func };
+};
+
+const isPublic = true;
+
+const spdl = async (url) => {
+    return url;
+};
+
+const askGroq = async (messages) => {
+    return "AI response placeholder";
+};
+
+const messageStore = {};
+const addMessage = (jid, role, content) => {
+    if (!messageStore[jid]) messageStore[jid] = [];
+    messageStore[jid].push({ role, content });
+};
+
+const getMessages = (jid) => {
+    return messageStore[jid] || [];
+};
+
 // Basic helper functions for the bot
 const fetchJson = async (url, options) => {
     try {
@@ -13,6 +38,11 @@ const fetchJson = async (url, options) => {
 };
 
 module.exports = {
+    cmd,
+    isPublic,
+    spdl,
+    askGroq,
+    addMessage,
+    getMessages,
     fetchJson
 };
-
