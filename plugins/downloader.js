@@ -4,7 +4,17 @@ const axios = require('axios');
 const fetch = require('node-fetch');
 const gis = require("g-i-s");
 const config = require("../config.js");
-const lang = getString('download');
+
+// Safety fallback definitions for language strings to prevent errors
+const lang = {
+    NEED_URL: "_Please provide a valid URL!_",
+    NEED_Q: "_Please provide a search query!_",
+    WAIT: "_Downloading..._",
+    DOWNLOADING: "_Downloading repository..._",
+    ERROR: "_An error occurred!_",
+    AI_HI: "_Hello! How can I help you today?_",
+    AI_SYS: "You are a helpful assistant powered by ᴇᴠᴀ-ᴍᴀʀɪʏ🇦🕊️."
+};
 
 
 cmd(
@@ -19,7 +29,6 @@ cmd(
     }) => {
         args = args || m.quoted?.text;
         if (!args) return await m.reply(lang.NEED_URL);
-        //if (isUrl(args)) return await m.reply(lang.NOT_URL);
         try {
             await m.react('⬇️');
             let response = await getJson(config.API + "/api/downloader/igdl?url=" + args);
@@ -76,7 +85,7 @@ cmd({
     name: "pintrest",
     fromMe: isPublic,
     category: "downloader",
-    desc: "Download images and content from Pinterest",
+    desc: "Download images and content from Pinterest for ᴇᴠᴀ-ᴍᴀʀɪʏ🇦🕊️",
 },
 async ({
     m, client, args
@@ -85,7 +94,6 @@ async ({
         let match = args || m.quoted?.text;
         if (!match) return await m.reply(lang.NEED_URL);
         await m.react('⬇️');
-        //if (!match.includes("pin.it")) return await m.reply("_Please provide a valid Pinterest URL_");
         const data = await getJson(config.API + "/api/downloader/pin?url=" + match);
         await m.sendFromUrl(data.url, { caption: data.title });
         await m.react('✅');
@@ -99,7 +107,7 @@ cmd({
     name: "fb",
     fromMe: isPublic,
     category: "downloader",
-    desc: "Download files from Facebook by providing a valid URL",
+    desc: "Download files from Facebook for ᴇᴠᴀ-ᴍᴀʀɪʏ🇦🕊️",
 },
 async ({
     m, client, args
@@ -129,21 +137,21 @@ cmd({
     try {
         args = args || m.quoted?.text;
         if(!args) return await m.reply(lang.NEED_Q);
-  await m.react('🔎');
-  const ser = await getJson(config.API + "/api/search/spotify?search=" + args)
-  const play = ser.data[0];
+        await m.react('🔎');
+        const ser = await getJson(config.API + "/api/search/spotify?search=" + args)
+        const play = ser.data[0];
         await m.react('⬇️');
         await m.reply(`${lang.WAIT} ${play.name} By ${play.artists}`)
-  const url = await spdl(play.url);
-  await m.sendMsg(m.jid , url, { mimetype: "audio/mpeg" } , "audio")
-   await m.react('✅');     
+        const url = await spdl(play.url);
+        await m.sendMsg(m.jid , url, { mimetype: "audio/mpeg" } , "audio")
+        await m.react('✅');     
     } catch (error) {
         await m.react('❌');
         m.reply(error);
     }
   });
 
-  cmd({
+cmd({
     name: "spotifydl",
     fromMe: isPublic,
     category: "downloader",
@@ -156,9 +164,9 @@ cmd({
         args = args || m.quoted?.text;
         if(!args) return await m.reply(lang.NEED_URL);
         await m.react('⬇️');
-  const url = await spdl(args);
-  await m.sendMsg(m.jid , url, { mimetype: "audio/mpeg" } , "audio")
-   await m.react('✅');     
+        const url = await spdl(args);
+        await m.sendMsg(m.jid , url, { mimetype: "audio/mpeg" } , "audio")
+        await m.react('✅');     
     } catch (error) {
         await m.react('❌');
         m.reply(error);
@@ -180,7 +188,7 @@ async ({
         await m.react('⬇️');
         let user = match.split("/")[3];
         let repo = match.split("/")[4];
-        const msg = await m.reply(lang.DOWNLOADING);
+        await m.reply(lang.DOWNLOADING);
         await client.sendMessage(m.jid, {
             document: {
                 url: `https://api.github.com/repos/${user}/${repo}/zipball`
@@ -196,4 +204,3 @@ async ({
         console.error(error);
     }
 });
-      
