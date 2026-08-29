@@ -9,7 +9,8 @@ const {
     default: makeWASocket,
     useMultiFileAuthState,
     DisconnectReason,
-    fetchLatestBaileysVersion
+    fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
@@ -33,10 +34,11 @@ if (fs.existsSync(pluginsDir)) {
 }
 
 async function startBot() {
-    // Clear old corrupted session to get fresh pairing code
     const sessionPath = path.join(__dirname, 'session');
-    if (!fs.existsSync(sessionPath)) {
-        fs.mkdirSync(sessionPath);
+    
+    // Clean session if it's causing issues
+    if (fs.existsSync(sessionPath) && !fs.existsSync(path.join(sessionPath, 'creds.json'))) {
+        fs.rmSync(sessionPath, { recursive: true, force: true });
     }
 
     const { state, saveCreds } = await useMultiFileAuthState('./session');
@@ -46,8 +48,11 @@ async function startBot() {
         version,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false,
-        auth: state,
-        browser: ['Ubuntu', 'Chrome', '20.0.04']
+        auth: {
+            creds: state.creds,
+            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
+        },
+        browser: ['Mac OS', 'Safari', '17.0']
     });
 
     if (!sock.authState.creds.registered) {
@@ -55,19 +60,23 @@ async function startBot() {
             let phoneNumber = config.OWNER_NUMBER.replace(/[^0-9]/g, '');
             let code = await sock.requestPairingCode(phoneNumber);
             console.log(`\n========================================\n`);
-            console.log(`🔑 YOUR BRAND NEW PAIRING CODE: ${code}`);
+            console.log(`🔑 NEW PAIRING CODE: ${code}`);
             console.log(`\n========================================\n`);
-        }, 4000);
+        }, 5000);
     }
 
     sock.ev.on('creds.update', saveCreds);
 
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut);
-            console.log('Connection closed. Reconnecting...', shouldReconnect);
-            if (shouldReconnect) startBot();
+            const reason = lastDisconnect?.error?.output?.statusCode;
+            console.log('Connection closed due to ', lastDisconnect.error, ', reconnecting...');
+            if (reason === DisconnectReason.loggedOut) {
+                console.log('Device logged out. Deleting session...');
+                fs.rmSync(sessionPath, { recursive: true, force: true });
+            }
+            startBot();
         } else if (connection === 'open') {
             console.log('✅ Connected successfully! EVA-MARIYA is active.');
         }
