@@ -1,1 +1,18 @@
+const fs = require('fs');
+const path = require('path');
+
+// Basic helper functions for the bot
+const fetchJson = async (url, options) => {
+    try {
+        const fetch = (await import('node-fetch')).default;
+        const res = await fetch(url, options);
+        return await res.json();
+    } catch (err) {
+        return err;
+    }
+};
+
+module.exports = {
+    fetchJson
+};
 
