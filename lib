@@ -1,48 +1,57 @@
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const pino = require('pino');
+const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
-// Basic command handler function for the bot
-const cmd = (info, func) => {
-    return { info, func };
-};
+const app = express();
+const PORT = process.env.PORT || 10000;
 
-const isPublic = true;
+app.get('/', (req, res) => {
+    res.send('EVA-MARIYA-MD is running!');
+});
 
-const spdl = async (url) => {
-    return url;
-};
+app.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+});
 
-const askGroq = async (messages) => {
-    return "AI response placeholder";
-};
+async function startBot() {
+    const { state, saveCreds } = await useMultiFileAuthState('./auth_info_baileys');
+    
+    const client = makeWASocket({
+        logger: pino({ level: 'silent' }),
+        auth: state,
+        printQRInTerminal: true
+    });
 
-const messageStore = {};
-const addMessage = (jid, role, content) => {
-    if (!messageStore[jid]) messageStore[jid] = [];
-    messageStore[jid].push({ role, content });
-};
+    client.ev.on('creds.update', saveCreds);
 
-const getMessages = (jid) => {
-    return messageStore[jid] || [];
-};
+    client.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect, qr } = update;
+        if (connection === 'open') {
+            console.log('Connected successfully! EVA-MARIYA is active.');
+        } else if (connection === 'close') {
+            const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
+            if (shouldReconnect) {
+                startBot();
+            }
+        }
+    });
 
-// Basic helper functions for the bot
-const fetchJson = async (url, options) => {
-    try {
-        const fetch = (await import('node-fetch')).default;
-        const res = await fetch(url, options);
-        return await res.json();
-    } catch (err) {
-        return err;
+    // Automatically load all plugins from plugins folder
+    const pluginsPath = path.join(__dirname, 'plugins');
+    if (fs.existsSync(pluginsPath)) {
+        fs.readdirSync(pluginsPath).forEach((file) => {
+            if (file.endsWith('.js')) {
+                try {
+                    require('./plugins/' + file);
+                    console.log(`Loaded plugin: ${file}`);
+                } catch (e) {
+                    console.error(`Failed to load plugin ${file}:`, e);
+                }
+            }
+        });
     }
-};
+}
 
-module.exports = {
-    cmd,
-    isPublic,
-    spdl,
-    askGroq,
-    addMessage,
-    getMessages,
-    fetchJson
-};
+startBot();
