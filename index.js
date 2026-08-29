@@ -1,3 +1,11 @@
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Render Port Server
+app.get('/', (req, res) => res.send('EVA-MARIYA Bot is Active!'));
+app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+
 const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -33,12 +41,11 @@ async function startBot() {
     const sock = makeWASocket({
         version,
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: false, // Disabling QR for Pairing Code
+        printQRInTerminal: false,
         auth: state,
         browser: ['Ubuntu', 'Chrome', '20.0.04']
     });
 
-    // 📲 Request Pairing Code if not registered
     if (!sock.authState.creds.registered) {
         setTimeout(async () => {
             let phoneNumber = config.OWNER_NUMBER.replace(/[^0-9]/g, '');
@@ -65,7 +72,7 @@ async function startBot() {
     sock.ev.on('messages.upsert', async (chatUpdate) => {
         try {
             const msg = chatUpdate.messages[0];
-            if (!msg.message || msg.key.fromMe) return;
+            if (!msg.message) return;
 
             const jid = msg.key.remoteJid;
             const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
